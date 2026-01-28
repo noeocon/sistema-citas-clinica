@@ -842,6 +842,7 @@ function App() {
                         </span>
                       </td>
                       {/* Busca esta sección dentro de tu <tbody> */}
+                      {/* CELDA DE MÉTODO DE PAGO */}
                       <td>
                         {cita.estatus === "Pendiente" ? (
                           <div className="btn-group btn-group-sm">
@@ -871,7 +872,21 @@ function App() {
                           "---"
                         ) : (
                           <div className="text-muted fw-bold">
-                            {cita.metodoPagoActual}
+                            {/* TRADUCCIÓN VISUAL */}
+                            {cita.metodoPagoActual === "TR" && (
+                              <span>🏦 Transferencia</span>
+                            )}
+                            {cita.metodoPagoActual === "TC" && (
+                              <span>💳 Tarjeta de Crédito</span>
+                            )}
+                            {cita.metodoPagoActual === "TD" && (
+                              <span>💳 Tarjeta de Débito</span>
+                            )}
+                            {/* Por si hay algún dato viejo o diferente */}
+                            {!["TR", "TC", "TD"].includes(
+                              cita.metodoPagoActual,
+                            ) && <span>{cita.metodoPagoActual}</span>}
+
                             <button
                               className="btn btn-sm btn-link p-0 ms-1"
                               onClick={() => reabrirPago(cita.id)}
