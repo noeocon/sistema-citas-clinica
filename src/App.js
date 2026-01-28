@@ -1,21 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { db } from './firebase'; // Tu conexión
-import { 
-  collection, 
-  addDoc, 
-  onSnapshot, 
-  doc, 
-  deleteDoc, 
-  updateDoc, 
-  query 
+import React, { useState, useEffect } from "react";
+import { db } from "./firebase"; // Tu conexión
+import {
+  collection,
+  addDoc,
+  onSnapshot,
+  doc,
+  deleteDoc,
+  updateDoc,
+  query,
 } from "firebase/firestore";
 
 function App() {
   // --- ESTADOS DE CONTROL DE SESIÓN Y UI ---
   const [esAdmin, setEsAdmin] = useState(false);
-  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState("");
   const [mostrarModalPass, setMostrarModalPass] = useState(false);
-  const [filtroDescarga, setFiltroDescarga] = useState({ inicio: '', fin: '' });
+  const [filtroDescarga, setFiltroDescarga] = useState({ inicio: "", fin: "" });
   const [editandoId, setEditandoId] = useState(null);
 
   const PASSWORD_CORRECTA = "Admin1234";
@@ -23,28 +23,47 @@ function App() {
   // --- CONFIGURACIÓN DE LA CLÍNICA ---
   const doctoresClinica = [
     "Dr. Miguel Angel Rivera Puente (Medicina Psiquiatra)",
-    "Psi. Roberto Moreno Topete (Psicologo)"
+    "Psi. Roberto Moreno Topete (Psicologo)",
   ];
 
   const horariosBase = [
-    "09:00", "10:00", "11:00", "12:00", "13:00", 
-    "16:00", "17:00", "18:00", "19:00"
+    "09:00",
+    "10:00",
+    "11:00",
+    "12:00",
+    "13:00",
+    "16:00",
+    "17:00",
+    "18:00",
+    "19:00",
   ];
 
   const initialFormState = {
-    doctor: '', nombre: '', correo: '', telefono: '', 
-    fechaCita: '', horaCita: '', requiereFactura: false,
-    rfc: '', razonSocial: '', cp: '', regimenFiscal: '',
-    usoCFDI: '', calle: '', numero: '', colonia: '', 
-    estado: '', municipio: ''
+    doctor: "",
+    nombre: "",
+    correo: "",
+    telefono: "",
+    fechaCita: "",
+    horaCita: "",
+    requiereFactura: false,
+    rfc: "",
+    razonSocial: "",
+    cp: "",
+    regimenFiscal: "",
+    usoCFDI: "",
+    calle: "",
+    numero: "",
+    colonia: "",
+    estado: "",
+    municipio: "",
   };
 
   const [formData, setFormData] = useState(initialFormState);
   const [citasRegistradas, setCitasRegistradas] = useState([]);
   const [bloqueoMasivo, setBloqueoMasivo] = useState({
-    doctor: '',
-    fecha: '',
-    horasSeleccionadas: []
+    doctor: "",
+    fecha: "",
+    horasSeleccionadas: [],
   });
 
   // --- LÓGICA DE FIREBASE: LEER DATOS ---
@@ -61,13 +80,13 @@ function App() {
   }, []);
 
   // --- LÓGICA DE VALIDACIÓN DE TIEMPO ---
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = new Date().toISOString().split("T")[0];
 
   const esFinDeSemana = (fechaStr) => {
     if (!fechaStr) return false;
-    const fecha = new Date(fechaStr + 'T00:00:00');
-    const dia = fecha.getDay(); 
-    return (dia === 0 || dia === 6);
+    const fecha = new Date(fechaStr + "T00:00:00");
+    const dia = fecha.getDay();
+    return dia === 0 || dia === 6;
   };
 
   const esFechaPasada = (fechaStr) => {
@@ -80,7 +99,7 @@ function App() {
     if (passwordInput === PASSWORD_CORRECTA) {
       setEsAdmin(true);
       setMostrarModalPass(false);
-      setPasswordInput('');
+      setPasswordInput("");
     } else {
       alert("Contraseña incorrecta. Intente de nuevo.");
     }
@@ -90,13 +109,13 @@ function App() {
     const actuales = bloqueoMasivo.horasSeleccionadas;
     if (actuales.includes(hora)) {
       setBloqueoMasivo({
-        ...bloqueoMasivo, 
-        horasSeleccionadas: actuales.filter(h => h !== hora)
+        ...bloqueoMasivo,
+        horasSeleccionadas: actuales.filter((h) => h !== hora),
       });
     } else {
       setBloqueoMasivo({
-        ...bloqueoMasivo, 
-        horasSeleccionadas: [...actuales, hora]
+        ...bloqueoMasivo,
+        horasSeleccionadas: [...actuales, hora],
       });
     }
   };
@@ -104,7 +123,9 @@ function App() {
   const ejecutarBloqueoMasivo = async () => {
     const { doctor, fecha, horasSeleccionadas } = bloqueoMasivo;
     if (!doctor || !fecha || horasSeleccionadas.length === 0) {
-      alert("Por favor complete Doctor, Fecha y seleccione al menos un horario.");
+      alert(
+        "Por favor complete Doctor, Fecha y seleccione al menos un horario.",
+      );
       return;
     }
     try {
@@ -114,101 +135,118 @@ function App() {
           nombre: "🚫 BLOQUEO ADMINISTRATIVO",
           fecha,
           hora,
-          estatus: 'BLOQUEADO',
-          metodoPagoActual: 'N/A',
-          requiereFactura: false
+          estatus: "BLOQUEADO",
+          metodoPagoActual: "N/A",
+          requiereFactura: false,
         });
       }
       setBloqueoMasivo({ ...bloqueoMasivo, horasSeleccionadas: [] });
       alert("Horarios bloqueados exitosamente.");
-    } catch (e) { alert("Error al bloquear."); }
+    } catch (e) {
+      alert("Error al bloquear.");
+    }
   };
 
   // --- LÓGICA DE CITAS ---
   const obtenerHorasDisponibles = (docName, fecha) => {
-    if (!docName || !fecha || esFinDeSemana(fecha) || esFechaPasada(fecha)) return [];
-    return horariosBase.filter(hora => 
-      !citasRegistradas.some(c => 
-        c.fecha === fecha && 
-        c.hora === hora && 
-        c.doctor === docName && 
-        c.id !== editandoId
-      )
+    if (!docName || !fecha || esFinDeSemana(fecha) || esFechaPasada(fecha))
+      return [];
+    return horariosBase.filter(
+      (hora) =>
+        !citasRegistradas.some(
+          (c) =>
+            c.fecha === fecha &&
+            c.hora === hora &&
+            c.doctor === docName &&
+            c.id !== editandoId,
+        ),
     );
   };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData({ 
-      ...formData, 
-      [name]: type === 'checkbox' ? checked : value 
+    setFormData({
+      ...formData,
+      [name]: type === "checkbox" ? checked : value,
     });
   };
 
-const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (esFinDeSemana(formData.fechaCita) || esFechaPasada(formData.fechaCita)) {
-      alert("La fecha seleccionada no es válida.");
+
+    // Validaciones de fecha
+    if (
+      esFinDeSemana(formData.fechaCita) ||
+      esFechaPasada(formData.fechaCita)
+    ) {
+      alert(
+        "La fecha seleccionada no es válida (Fin de semana o fecha pasada).",
+      );
       return;
     }
 
-    const dataFinal = { 
-      ...formData, 
-      fecha: formData.fechaCita, 
-      hora: formData.horaCita 
+    const dataFinal = {
+      ...formData,
+      fecha: formData.fechaCita,
+      hora: formData.horaCita,
     };
 
     try {
       if (editandoId) {
+        // Actualizar cita existente
         const citaRef = doc(db, "citas", editandoId);
         await updateDoc(citaRef, dataFinal);
         setEditandoId(null);
-        alert("Cita actualizada correctamente.");
+        alert("📝 Cita actualizada correctamente en el sistema.");
       } else {
-        // 1. Guardar en Firebase
+        // Guardar nueva cita solo en Firebase
         await addDoc(collection(db, "citas"), {
           ...dataFinal,
-          estatus: 'Pendiente',
-          metodoPagoActual: 'Pendiente'
+          estatus: "Pendiente",
+          metodoPagoActual: "Pendiente",
         });
 
-        // 2. Lógica de WhatsApp (Cambia el número de abajo por el tuyo)
-        const miTelefono = "523121312968"; // Escribe tu número: Código de país + número
-        const mensaje = `Hola, quiero agendar una cita.%0A*Paciente:* ${formData.nombre}%0A*Doctor:* ${formData.doctor}%0A*Fecha:* ${formData.fechaCita}%0A*Hora:* ${formData.horaCita} hrs.`;
-        
-        window.open(`https://wa.me/${miTelefono}?text=${mensaje}`, '_blank');
-        
-        alert("Cita agendada con éxito.");
+        alert("✅ ¡Cita agendada con éxito! Ya puedes verla en la agenda.");
       }
+
+      // Limpiar el formulario después de guardar
       setFormData(initialFormState);
     } catch (error) {
-      alert("Error al conectar con la base de datos.");
+      console.error("Error al guardar:", error);
+      alert("❌ Hubo un error al conectar con la base de datos.");
     }
   };
 
   // --- ACCIONES DEL ADMINISTRADOR EN FIREBASE ---
   const marcarComoPagado = async (id, metodo) => {
     const citaRef = doc(db, "citas", id);
-    await updateDoc(citaRef, { estatus: 'Pagado', metodoPagoActual: metodo });
+    await updateDoc(citaRef, { estatus: "Pagado", metodoPagoActual: metodo });
   };
 
   const reabrirPago = async (id) => {
     const citaRef = doc(db, "citas", id);
-    await updateDoc(citaRef, { estatus: 'Pendiente', metodoPagoActual: 'Pendiente' });
+    await updateDoc(citaRef, {
+      estatus: "Pendiente",
+      metodoPagoActual: "Pendiente",
+    });
   };
 
   const eliminarRegistro = async (id) => {
-    if (window.confirm("¿Seguro que desea eliminar este registro permanentemente?")) {
+    if (
+      window.confirm(
+        "¿Seguro que desea eliminar este registro permanentemente?",
+      )
+    ) {
       await deleteDoc(doc(db, "citas", id));
     }
   };
 
   const prepararEdicion = (cita) => {
     setEditandoId(cita.id);
-    setFormData({ 
-      ...cita, 
-      fechaCita: cita.fecha, 
-      horaCita: cita.hora 
+    setFormData({
+      ...cita,
+      fechaCita: cita.fecha,
+      horaCita: cita.hora,
     });
     window.scrollTo(0, 0);
   };
@@ -218,25 +256,66 @@ const handleSubmit = async (e) => {
       alert("Por favor seleccione un rango de fechas.");
       return;
     }
-    const filtradas = citasRegistradas.filter(c => 
-      c.fecha >= filtroDescarga.inicio && 
-      c.fecha <= filtroDescarga.fin && 
-      c.estatus !== 'BLOQUEADO'
+    const filtradas = citasRegistradas.filter(
+      (c) =>
+        c.fecha >= filtroDescarga.inicio &&
+        c.fecha <= filtroDescarga.fin &&
+        c.estatus !== "BLOQUEADO",
     );
     if (filtradas.length === 0) {
       alert("No hay citas en este rango.");
       return;
     }
-    const headers = ["ID", "Doctor", "Paciente", "Correo", "Telefono", "Fecha", "Hora", "Estatus", "Metodo Pago", "Factura", "RFC", "Razon Social", "CP", "Regimen Fiscal", "Uso CFDI", "Calle", "Numero", "Colonia", "Estado", "Municipio"];
-    const filas = filtradas.map(c => [
-      c.id, c.doctor, c.nombre, c.correo, c.telefono, c.fecha, c.hora, 
-      c.estatus, c.metodoPagoActual, c.requiereFactura ? 'SI' : 'NO',
-      c.rfc || '', c.razonSocial || '', c.cp || '', c.regimenFiscal || '', 
-      c.usoCFDI || '', c.calle || '', c.numero || '', c.colonia || '', 
-      c.estado || '', c.municipio || ''
+    const headers = [
+      "ID",
+      "Doctor",
+      "Paciente",
+      "Correo",
+      "Telefono",
+      "Fecha",
+      "Hora",
+      "Estatus",
+      "Metodo Pago",
+      "Factura",
+      "RFC",
+      "Razon Social",
+      "CP",
+      "Regimen Fiscal",
+      "Uso CFDI",
+      "Calle",
+      "Numero",
+      "Colonia",
+      "Estado",
+      "Municipio",
+    ];
+    const filas = filtradas.map((c) => [
+      c.id,
+      c.doctor,
+      c.nombre,
+      c.correo,
+      c.telefono,
+      c.fecha,
+      c.hora,
+      c.estatus,
+      c.metodoPagoActual,
+      c.requiereFactura ? "SI" : "NO",
+      c.rfc || "",
+      c.razonSocial || "",
+      c.cp || "",
+      c.regimenFiscal || "",
+      c.usoCFDI || "",
+      c.calle || "",
+      c.numero || "",
+      c.colonia || "",
+      c.estado || "",
+      c.municipio || "",
     ]);
-    let csvContent = "\uFEFF" + headers.join(",") + "\n" + filas.map(f => f.join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    let csvContent =
+      "\uFEFF" +
+      headers.join(",") +
+      "\n" +
+      filas.map((f) => f.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = `Reporte_Clinica.csv`;
@@ -248,11 +327,17 @@ const handleSubmit = async (e) => {
       {/* BOTÓN DE ACCESO ADMIN */}
       <div className="d-flex justify-content-end mb-4">
         {!esAdmin ? (
-          <button className="btn btn-outline-dark btn-sm" onClick={() => setMostrarModalPass(true)}>
+          <button
+            className="btn btn-outline-dark btn-sm"
+            onClick={() => setMostrarModalPass(true)}
+          >
             🔑 Acceso Admin
           </button>
         ) : (
-          <button className="btn btn-danger btn-sm" onClick={() => setEsAdmin(false)}>
+          <button
+            className="btn btn-danger btn-sm"
+            onClick={() => setEsAdmin(false)}
+          >
             🔒 Cerrar Sesión Admin
           </button>
         )}
@@ -260,20 +345,33 @@ const handleSubmit = async (e) => {
 
       {/* MODAL DE CONTRASEÑA */}
       {mostrarModalPass && (
-        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{background: 'rgba(0,0,0,0.8)', zIndex: 1050}}>
-          <div className="bg-white p-4 rounded shadow-lg text-center" style={{maxWidth: '350px'}}>
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+          style={{ background: "rgba(0,0,0,0.8)", zIndex: 1050 }}
+        >
+          <div
+            className="bg-white p-4 rounded shadow-lg text-center"
+            style={{ maxWidth: "350px" }}
+          >
             <h4 className="mb-3">Panel Privado</h4>
-            <input 
-              type="password" 
-              className="form-control mb-3" 
-              placeholder="Contraseña" 
-              value={passwordInput} 
+            <input
+              type="password"
+              className="form-control mb-3"
+              placeholder="Contraseña"
+              value={passwordInput}
               onChange={(e) => setPasswordInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && manejarLoginAdmin()}
+              onKeyPress={(e) => e.key === "Enter" && manejarLoginAdmin()}
             />
             <div className="d-grid gap-2">
-              <button className="btn btn-primary" onClick={manejarLoginAdmin}>Entrar</button>
-              <button className="btn btn-link btn-sm text-muted" onClick={() => setMostrarModalPass(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={manejarLoginAdmin}>
+                Entrar
+              </button>
+              <button
+                className="btn btn-link btn-sm text-muted"
+                onClick={() => setMostrarModalPass(false)}
+              >
+                Cancelar
+              </button>
             </div>
           </div>
         </div>
@@ -288,80 +386,197 @@ const handleSubmit = async (e) => {
           <div className="card-body">
             <div className="row g-3">
               <div className="col-md-4">
-                <label className="form-label fw-bold small">1. Seleccionar Doctor</label>
-                <select className="form-select" value={bloqueoMasivo.doctor} onChange={(e) => setBloqueoMasivo({...bloqueoMasivo, doctor: e.target.value})}>
+                <label className="form-label fw-bold small">
+                  1. Seleccionar Doctor
+                </label>
+                <select
+                  className="form-select"
+                  value={bloqueoMasivo.doctor}
+                  onChange={(e) =>
+                    setBloqueoMasivo({
+                      ...bloqueoMasivo,
+                      doctor: e.target.value,
+                    })
+                  }
+                >
                   <option value="">Seleccione un médico...</option>
-                  {doctoresClinica.map(d => <option key={d} value={d}>{d}</option>)}
+                  {doctoresClinica.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="col-md-4">
-                <label className="form-label fw-bold small">2. Seleccionar Fecha</label>
-                <input type="date" className="form-control" min={hoy} value={bloqueoMasivo.fecha} onChange={(e) => setBloqueoMasivo({...bloqueoMasivo, fecha: e.target.value})} />
+                <label className="form-label fw-bold small">
+                  2. Seleccionar Fecha
+                </label>
+                <input
+                  type="date"
+                  className="form-control"
+                  min={hoy}
+                  value={bloqueoMasivo.fecha}
+                  onChange={(e) =>
+                    setBloqueoMasivo({
+                      ...bloqueoMasivo,
+                      fecha: e.target.value,
+                    })
+                  }
+                />
               </div>
               <div className="col-md-4">
-                <label className="form-label fw-bold small">3. Marcar Horarios a Cerrar</label>
+                <label className="form-label fw-bold small">
+                  3. Marcar Horarios a Cerrar
+                </label>
                 <div className="d-flex flex-wrap gap-2 p-2 border rounded bg-light">
-                  {horariosBase.map(h => (
+                  {horariosBase.map((h) => (
                     <div key={h} className="form-check form-check-inline m-0">
-                      <input className="form-check-input" type="checkbox" id={`block-${h}`} checked={bloqueoMasivo.horasSeleccionadas.includes(h)} onChange={() => toggleHoraBloqueo(h)} />
-                      <label className="form-check-label small" htmlFor={`block-${h}`}>{h}</label>
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id={`block-${h}`}
+                        checked={bloqueoMasivo.horasSeleccionadas.includes(h)}
+                        onChange={() => toggleHoraBloqueo(h)}
+                      />
+                      <label
+                        className="form-check-label small"
+                        htmlFor={`block-${h}`}
+                      >
+                        {h}
+                      </label>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
-            <button className="btn btn-danger mt-3 w-100 fw-bold" onClick={ejecutarBloqueoMasivo}>BLOQUEAR AGENDA PARA ESTE DÍA</button>
+            <button
+              className="btn btn-danger mt-3 w-100 fw-bold"
+              onClick={ejecutarBloqueoMasivo}
+            >
+              BLOQUEAR AGENDA PARA ESTE DÍA
+            </button>
           </div>
         </div>
       )}
 
       {/* FORMULARIO DE AGENDAMIENTO PARA PACIENTES */}
       <div className="card shadow-lg mb-5 border-0">
-        <div className={`card-header ${editandoId ? 'bg-warning text-dark' : 'bg-primary text-white'} text-center py-3`}>
-          <h2 className="mb-0">{editandoId ? '📝 Editando Registro de Cita' : '📅 Sistema de Citas Médicas'}</h2>
+        <div
+          className={`card-header ${editandoId ? "bg-warning text-dark" : "bg-primary text-white"} text-center py-3`}
+        >
+          <h2 className="mb-0">
+            {editandoId
+              ? "📝 Editando Registro de Cita"
+              : "📅 Sistema de Citas Médicas"}
+          </h2>
         </div>
         <div className="card-body p-4">
           <form onSubmit={handleSubmit}>
-            <h4 className="text-primary mb-3 border-bottom pb-2">1. Información de la Cita</h4>
+            <h4 className="text-primary mb-3 border-bottom pb-2">
+              1. Información de la Cita
+            </h4>
             <div className="row g-3 mb-4">
               <div className="col-md-12">
-                <label className="form-label fw-bold">Médico Especialista *</label>
-                <select className="form-select border-primary" name="doctor" value={formData.doctor} onChange={handleChange} required>
+                <label className="form-label fw-bold">
+                  Médico Especialista *
+                </label>
+                <select
+                  className="form-select border-primary"
+                  name="doctor"
+                  value={formData.doctor}
+                  onChange={handleChange}
+                  required
+                >
                   <option value="">Haga clic para seleccionar médico...</option>
-                  {doctoresClinica.map(doc => <option key={doc} value={doc}>{doc}</option>)}
+                  {doctoresClinica.map((doc) => (
+                    <option key={doc} value={doc}>
+                      {doc}
+                    </option>
+                  ))}
                 </select>
               </div>
-              <div className="col-md-4"><label className="form-label fw-bold">Nombre del Paciente *</label><input type="text" className="form-control" name="nombre" value={formData.nombre} onChange={handleChange} required /></div>
-              <div className="col-md-4"><label className="form-label fw-bold">Correo Electrónico *</label><input type="email" className="form-control" name="correo" value={formData.correo} onChange={handleChange} required /></div>
-              <div className="col-md-4"><label className="form-label fw-bold">Teléfono de Contacto *</label><input type="tel" className="form-control" name="telefono" value={formData.telefono} onChange={handleChange} required /></div>
-              
-              <div className="col-md-6">
-                <label className="form-label fw-bold">Fecha de la Cita (Lunes a Viernes) *</label>
-                <input 
-                  type="date" 
-                  className={`form-control ${esFinDeSemana(formData.fechaCita) || esFechaPasada(formData.fechaCita) ? 'is-invalid' : ''}`} 
-                  name="fechaCita" 
-                  min={hoy} 
-                  value={formData.fechaCita} 
-                  onChange={handleChange} 
-                  required 
+              <div className="col-md-4">
+                <label className="form-label fw-bold">
+                  Nombre del Paciente *
+                </label>
+                <input
+                  type="text"
+                  className="form-control"
+                  name="nombre"
+                  value={formData.nombre}
+                  onChange={handleChange}
+                  required
                 />
-                <div className="invalid-feedback">Lo sentimos, no hay citas en fines de semana o fechas pasadas.</div>
+              </div>
+              <div className="col-md-4">
+                <label className="form-label fw-bold">
+                  Correo Electrónico *
+                </label>
+                <input
+                  type="email"
+                  className="form-control"
+                  name="correo"
+                  value={formData.correo}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div className="col-md-4">
+                <label className="form-label fw-bold">
+                  Teléfono de Contacto *
+                </label>
+                <input
+                  type="tel"
+                  className="form-control"
+                  name="telefono"
+                  value={formData.telefono}
+                  onChange={handleChange}
+                  required
+                />
               </div>
 
               <div className="col-md-6">
-                <label className="form-label fw-bold">Horarios Disponibles *</label>
-                <select 
-                  className="form-select" 
-                  name="horaCita" 
-                  value={formData.horaCita} 
-                  onChange={handleChange} 
-                  required 
-                  disabled={!formData.fechaCita || esFinDeSemana(formData.fechaCita) || esFechaPasada(formData.fechaCita)}
+                <label className="form-label fw-bold">
+                  Fecha de la Cita (Lunes a Viernes) *
+                </label>
+                <input
+                  type="date"
+                  className={`form-control ${esFinDeSemana(formData.fechaCita) || esFechaPasada(formData.fechaCita) ? "is-invalid" : ""}`}
+                  name="fechaCita"
+                  min={hoy}
+                  value={formData.fechaCita}
+                  onChange={handleChange}
+                  required
+                />
+                <div className="invalid-feedback">
+                  Lo sentimos, no hay citas en fines de semana o fechas pasadas.
+                </div>
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label fw-bold">
+                  Horarios Disponibles *
+                </label>
+                <select
+                  className="form-select"
+                  name="horaCita"
+                  value={formData.horaCita}
+                  onChange={handleChange}
+                  required
+                  disabled={
+                    !formData.fechaCita ||
+                    esFinDeSemana(formData.fechaCita) ||
+                    esFechaPasada(formData.fechaCita)
+                  }
                 >
                   <option value="">Seleccione un horario...</option>
-                  {obtenerHorasDisponibles(formData.doctor, formData.fechaCita).map(h => (
-                    <option key={h} value={h}>{h} hrs</option>
+                  {obtenerHorasDisponibles(
+                    formData.doctor,
+                    formData.fechaCita,
+                  ).map((h) => (
+                    <option key={h} value={h}>
+                      {h} hrs
+                    </option>
                   ))}
                 </select>
               </div>
@@ -369,51 +584,177 @@ const handleSubmit = async (e) => {
 
             {/* SECCIÓN DE FACTURACIÓN */}
             <div className="form-check form-switch mb-4">
-              <input className="form-check-input" type="checkbox" name="requiereFactura" id="checkFactura" checked={formData.requiereFactura} onChange={handleChange} />
-              <label className="form-check-label fw-bold text-primary" htmlFor="checkFactura">¿Desea solicitar factura fiscal?</label>
+              <input
+                className="form-check-input"
+                type="checkbox"
+                name="requiereFactura"
+                id="checkFactura"
+                checked={formData.requiereFactura}
+                onChange={handleChange}
+              />
+              <label
+                className="form-check-label fw-bold text-primary"
+                htmlFor="checkFactura"
+              >
+                ¿Desea solicitar factura fiscal?
+              </label>
             </div>
 
             {formData.requiereFactura && (
               <div className="p-4 bg-light rounded border mb-4 shadow-sm">
-                <h4 className="text-primary mb-3 border-bottom pb-2">2. Datos Fiscales (Todos Obligatorios)</h4>
+                <h4 className="text-primary mb-3 border-bottom pb-2">
+                  2. Datos Fiscales (Todos Obligatorios)
+                </h4>
                 <div className="row g-3">
-                  <div className="col-md-4"><label className="form-label fw-bold small">RFC *</label><input type="text" className="form-control" name="rfc" value={formData.rfc} onChange={handleChange} required /></div>
-                  <div className="col-md-8"><label className="form-label fw-bold small">Razón Social *</label><input type="text" className="form-control" name="razonSocial" value={formData.razonSocial} onChange={handleChange} required /></div>
-                  <div className="col-md-3"><label className="form-label fw-bold small">CP *</label><input type="text" className="form-control" name="cp" value={formData.cp} onChange={handleChange} required /></div>
+                  <div className="col-md-4">
+                    <label className="form-label fw-bold small">RFC *</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      name="rfc"
+                      value={formData.rfc}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                  <div className="col-md-8">
+                    <label className="form-label fw-bold small">
+                      Razón Social *
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      name="razonSocial"
+                      value={formData.razonSocial}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                  <div className="col-md-3">
+                    <label className="form-label fw-bold small">CP *</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      name="cp"
+                      value={formData.cp}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
                   <div className="col-md-5">
-                    <label className="form-label fw-bold small">Régimen Fiscal *</label>
-                    <select className="form-select" name="regimenFiscal" value={formData.regimenFiscal} onChange={handleChange} required>
+                    <label className="form-label fw-bold small">
+                      Régimen Fiscal *
+                    </label>
+                    <select
+                      className="form-select"
+                      name="regimenFiscal"
+                      value={formData.regimenFiscal}
+                      onChange={handleChange}
+                      required
+                    >
                       <option value="">Seleccione...</option>
-                      <option value="601">601 - General de Ley Personas Morales</option>
+                      <option value="601">
+                        601 - General de Ley Personas Morales
+                      </option>
                       <option value="605">605 - Sueldos y Salarios</option>
-                      <option value="612">612 - Personas Físicas con Actividades Empresariales</option>
-                      <option value="626">626 - Régimen Simplificado de Confianza (RESICO)</option>
+                      <option value="612">
+                        612 - Personas Físicas con Actividades Empresariales
+                      </option>
+                      <option value="626">
+                        626 - Régimen Simplificado de Confianza (RESICO)
+                      </option>
                     </select>
                   </div>
                   <div className="col-md-4">
-                    <label className="form-label fw-bold small">Uso de CFDI *</label>
-                    <select className="form-select" name="usoCFDI" value={formData.usoCFDI} onChange={handleChange} required>
+                    <label className="form-label fw-bold small">
+                      Uso de CFDI *
+                    </label>
+                    <select
+                      className="form-select"
+                      name="usoCFDI"
+                      value={formData.usoCFDI}
+                      onChange={handleChange}
+                      required
+                    >
                       <option value="">Seleccione...</option>
                       <option value="G03">G03 - Gastos en general</option>
-                      <option value="D01">D01 - Honorarios médicos, dentales y gastos hospitalarios</option>
+                      <option value="D01">
+                        D01 - Honorarios médicos, dentales y gastos
+                        hospitalarios
+                      </option>
                     </select>
                   </div>
-                  <div className="col-md-6"><label className="form-label small">Calle *</label><input type="text" className="form-control" name="calle" value={formData.calle} onChange={handleChange} required /></div>
-                  <div className="col-md-2"><label className="form-label small">Núm. *</label><input type="text" className="form-control" name="numero" value={formData.numero} onChange={handleChange} required /></div>
-                  <div className="col-md-4"><label className="form-label small">Colonia *</label><input type="text" className="form-control" name="colonia" value={formData.colonia} onChange={handleChange} required /></div>
-                  <div className="col-md-6"><label className="form-label small">Estado *</label><input type="text" className="form-control" name="estado" value={formData.estado} onChange={handleChange} required /></div>
-                  <div className="col-md-6"><label className="form-label small">Municipio *</label><input type="text" className="form-control" name="municipio" value={formData.municipio} onChange={handleChange} required /></div>
+                  <div className="col-md-6">
+                    <label className="form-label small">Calle *</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      name="calle"
+                      value={formData.calle}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                  <div className="col-md-2">
+                    <label className="form-label small">Núm. *</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      name="numero"
+                      value={formData.numero}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                  <div className="col-md-4">
+                    <label className="form-label small">Colonia *</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      name="colonia"
+                      value={formData.colonia}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label small">Estado *</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      name="estado"
+                      value={formData.estado}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label small">Municipio *</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      name="municipio"
+                      value={formData.municipio}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
                 </div>
               </div>
             )}
-            
+
             <div className="d-grid gap-2">
-              <button 
-                type="submit" 
-                className={`btn ${editandoId ? 'btn-warning' : 'btn-primary'} btn-lg shadow fw-bold`} 
-                disabled={esFinDeSemana(formData.fechaCita) || esFechaPasada(formData.fechaCita)}
+              <button
+                type="submit"
+                className={`btn ${editandoId ? "btn-warning" : "btn-primary"} btn-lg shadow fw-bold`}
+                disabled={
+                  esFinDeSemana(formData.fechaCita) ||
+                  esFechaPasada(formData.fechaCita)
+                }
               >
-                {editandoId ? '💾 GUARDAR CAMBIOS EN LA CITA' : '✅ CONFIRMAR Y AGENDAR CITA'}
+                {editandoId
+                  ? "💾 GUARDAR CAMBIOS EN LA CITA"
+                  : "✅ CONFIRMAR Y AGENDAR CITA"}
               </button>
             </div>
           </form>
@@ -426,9 +767,29 @@ const handleSubmit = async (e) => {
           <div className="card-header bg-dark text-white p-3 d-flex justify-content-between align-items-center flex-wrap">
             <h4 className="mb-0">Administración de Agenda y Pagos</h4>
             <div className="d-flex gap-2">
-              <input type="date" className="form-control form-control-sm" onChange={(e) => setFiltroDescarga({...filtroDescarga, inicio: e.target.value})} />
-              <input type="date" className="form-control form-control-sm" onChange={(e) => setFiltroDescarga({...filtroDescarga, fin: e.target.value})} />
-              <button className="btn btn-success btn-sm" onClick={descargarExcel}>📊 Exportar Ventas Excel</button>
+              <input
+                type="date"
+                className="form-control form-control-sm"
+                onChange={(e) =>
+                  setFiltroDescarga({
+                    ...filtroDescarga,
+                    inicio: e.target.value,
+                  })
+                }
+              />
+              <input
+                type="date"
+                className="form-control form-control-sm"
+                onChange={(e) =>
+                  setFiltroDescarga({ ...filtroDescarga, fin: e.target.value })
+                }
+              />
+              <button
+                className="btn btn-success btn-sm"
+                onClick={descargarExcel}
+              >
+                📊 Exportar Ventas Excel
+              </button>
             </div>
           </div>
           <div className="card-body p-0">
@@ -445,47 +806,110 @@ const handleSubmit = async (e) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {citasRegistradas.map(cita => (
-                    <tr key={cita.id} className={cita.estatus === 'BLOQUEADO' ? 'table-secondary text-muted' : ''}>
-                      <td className="text-start"><strong>{cita.doctor}</strong></td>
+                  {citasRegistradas.map((cita) => (
+                    <tr
+                      key={cita.id}
+                      className={
+                        cita.estatus === "BLOQUEADO"
+                          ? "table-secondary text-muted"
+                          : ""
+                      }
+                    >
+                      <td className="text-start">
+                        <strong>{cita.doctor}</strong>
+                      </td>
                       <td className="text-start">
                         {cita.nombre}
-                        {cita.estatus !== 'BLOQUEADO' && (
-                          <div className="text-muted" style={{fontSize: '10px'}}>{cita.correo} | {cita.telefono}</div>
+                        {cita.estatus !== "BLOQUEADO" && (
+                          <div
+                            className="text-muted"
+                            style={{ fontSize: "10px" }}
+                          >
+                            {cita.correo} | {cita.telefono}
+                          </div>
                         )}
                       </td>
-                      <td>{cita.fecha}<br/>{cita.hora} hrs</td>
                       <td>
-                        <span className={`badge ${cita.estatus === 'Pagado' ? 'bg-success' : cita.estatus === 'BLOQUEADO' ? 'bg-dark' : 'bg-danger'}`}>
+                        {cita.fecha}
+                        <br />
+                        {cita.hora} hrs
+                      </td>
+                      <td>
+                        <span
+                          className={`badge ${cita.estatus === "Pagado" ? "bg-success" : cita.estatus === "BLOQUEADO" ? "bg-dark" : "bg-danger"}`}
+                        >
                           {cita.estatus}
                         </span>
                       </td>
+                      {/* Busca esta sección dentro de tu <tbody> */}
                       <td>
-                        {cita.estatus === 'Pendiente' ? (
+                        {cita.estatus === "Pendiente" ? (
                           <div className="btn-group btn-group-sm">
-                            <button title="Transferencia" className="btn btn-outline-primary" onClick={() => marcarComoPagado(cita.id, 'Transferencia')}>T</button>
-                            <button title="T. Crédito" className="btn btn-outline-info" onClick={() => marcarComoPagado(cita.id, 'T. Crédito')}>TC</button>
-                            <button title="Efectivo" className="btn btn-outline-success" onClick={() => marcarComoPagado(cita.id, 'Efectivo')}>$</button>
+                            <button
+                              title="Transferencia"
+                              className="btn btn-outline-primary"
+                              onClick={() => marcarComoPagado(cita.id, "TR")}
+                            >
+                              TR
+                            </button>
+                            <button
+                              title="T. Crédito"
+                              className="btn btn-outline-info"
+                              onClick={() => marcarComoPagado(cita.id, "TC")}
+                            >
+                              TC
+                            </button>
+                            <button
+                              title="T. Débito"
+                              className="btn btn-outline-success"
+                              onClick={() => marcarComoPagado(cita.id, "TD")}
+                            >
+                              TD
+                            </button>
                           </div>
-                        ) : cita.estatus === 'BLOQUEADO' ? '---' : (
+                        ) : cita.estatus === "BLOQUEADO" ? (
+                          "---"
+                        ) : (
                           <div className="text-muted fw-bold">
-                            {cita.metodoPagoActual} 
-                            <button className="btn btn-sm btn-link p-0 ms-1" onClick={() => reabrirPago(cita.id)} title="Revertir Pago">🔄</button>
+                            {cita.metodoPagoActual}
+                            <button
+                              className="btn btn-sm btn-link p-0 ms-1"
+                              onClick={() => reabrirPago(cita.id)}
+                              title="Revertir Pago"
+                            >
+                              🔄
+                            </button>
                           </div>
                         )}
                       </td>
                       <td>
                         <div className="btn-group btn-group-sm">
-                          {cita.estatus !== 'BLOQUEADO' && (
-                            <button className="btn btn-warning" onClick={() => prepararEdicion(cita)} title="Editar">📝</button>
+                          {cita.estatus !== "BLOQUEADO" && (
+                            <button
+                              className="btn btn-warning"
+                              onClick={() => prepararEdicion(cita)}
+                              title="Editar"
+                            >
+                              📝
+                            </button>
                           )}
-                          <button className="btn btn-danger" onClick={() => eliminarRegistro(cita.id)} title="Eliminar">🗑️</button>
+                          <button
+                            className="btn btn-danger"
+                            onClick={() => eliminarRegistro(cita.id)}
+                            title="Eliminar"
+                          >
+                            🗑️
+                          </button>
                         </div>
                       </td>
                     </tr>
                   ))}
                   {citasRegistradas.length === 0 && (
-                    <tr><td colSpan="6" className="py-4 text-muted">No hay registros en la agenda actualmente.</td></tr>
+                    <tr>
+                      <td colSpan="6" className="py-4 text-muted">
+                        No hay registros en la agenda actualmente.
+                      </td>
+                    </tr>
                   )}
                 </tbody>
               </table>
