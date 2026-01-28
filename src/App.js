@@ -1,4 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { db } from './firebase'; // Tu conexión
+import { 
+  collection, 
+  addDoc, 
+  onSnapshot, 
+  doc, 
+  deleteDoc, 
+  updateDoc, 
+  query 
+} from "firebase/firestore";
 
 function App() {
   // --- ESTADOS DE CONTROL DE SESIÓN Y UI ---
@@ -22,34 +32,33 @@ function App() {
   ];
 
   const initialFormState = {
-    doctor: '', 
-    nombre: '', 
-    correo: '', 
-    telefono: '', 
-    fechaCita: '', 
-    horaCita: '', 
-    requiereFactura: false,
-    rfc: '', 
-    razonSocial: '', 
-    cp: '', 
-    regimenFiscal: '',
-    usoCFDI: '', 
-    calle: '', 
-    numero: '', 
-    colonia: '', 
-    estado: '', 
-    municipio: ''
+    doctor: '', nombre: '', correo: '', telefono: '', 
+    fechaCita: '', horaCita: '', requiereFactura: false,
+    rfc: '', razonSocial: '', cp: '', regimenFiscal: '',
+    usoCFDI: '', calle: '', numero: '', colonia: '', 
+    estado: '', municipio: ''
   };
 
   const [formData, setFormData] = useState(initialFormState);
   const [citasRegistradas, setCitasRegistradas] = useState([]);
-  
-  // Estado para la herramienta de bloqueo masivo del administrador
   const [bloqueoMasivo, setBloqueoMasivo] = useState({
     doctor: '',
     fecha: '',
     horasSeleccionadas: []
   });
+
+  // --- LÓGICA DE FIREBASE: LEER DATOS ---
+  useEffect(() => {
+    const q = query(collection(db, "citas"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const docs = [];
+      querySnapshot.forEach((doc) => {
+        docs.push({ ...doc.data(), id: doc.id });
+      });
+      setCitasRegistradas(docs);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // --- LÓGICA DE VALIDACIÓN DE TIEMPO ---
   const hoy = new Date().toISOString().split('T')[0];
@@ -58,7 +67,7 @@ function App() {
     if (!fechaStr) return false;
     const fecha = new Date(fechaStr + 'T00:00:00');
     const dia = fecha.getDay(); 
-    return (dia === 0 || dia === 6); // 0 es Domingo, 6 es Sábado
+    return (dia === 0 || dia === 6);
   };
 
   const esFechaPasada = (fechaStr) => {
@@ -92,41 +101,37 @@ function App() {
     }
   };
 
-  const ejecutarBloqueoMasivo = () => {
+  const ejecutarBloqueoMasivo = async () => {
     const { doctor, fecha, horasSeleccionadas } = bloqueoMasivo;
     if (!doctor || !fecha || horasSeleccionadas.length === 0) {
       alert("Por favor complete Doctor, Fecha y seleccione al menos un horario.");
       return;
     }
-    if (esFinDeSemana(fecha) || esFechaPasada(fecha)) {
-      alert("No se pueden bloquear fines de semana o fechas pasadas.");
-      return;
-    }
-
-    const nuevosBloqueos = horasSeleccionadas.map(hora => ({
-      id: Date.now() + Math.random(),
-      doctor,
-      nombre: "🚫 BLOQUEO ADMINISTRATIVO",
-      fecha,
-      hora,
-      estatus: 'BLOQUEADO',
-      metodoPagoActual: 'N/A',
-      requiereFactura: false
-    }));
-
-    setCitasRegistradas([...citasRegistradas, ...nuevosBloqueos]);
-    setBloqueoMasivo({ ...bloqueoMasivo, horasSeleccionadas: [] });
-    alert("Horarios bloqueados exitosamente en la agenda.");
+    try {
+      for (const hora of horasSeleccionadas) {
+        await addDoc(collection(db, "citas"), {
+          doctor,
+          nombre: "🚫 BLOQUEO ADMINISTRATIVO",
+          fecha,
+          hora,
+          estatus: 'BLOQUEADO',
+          metodoPagoActual: 'N/A',
+          requiereFactura: false
+        });
+      }
+      setBloqueoMasivo({ ...bloqueoMasivo, horasSeleccionadas: [] });
+      alert("Horarios bloqueados exitosamente.");
+    } catch (e) { alert("Error al bloquear."); }
   };
 
   // --- LÓGICA DE CITAS ---
-  const obtenerHorasDisponibles = (doc, fecha) => {
-    if (!doc || !fecha || esFinDeSemana(fecha) || esFechaPasada(fecha)) return [];
+  const obtenerHorasDisponibles = (docName, fecha) => {
+    if (!docName || !fecha || esFinDeSemana(fecha) || esFechaPasada(fecha)) return [];
     return horariosBase.filter(hora => 
       !citasRegistradas.some(c => 
         c.fecha === fecha && 
         c.hora === hora && 
-        c.doctor === doc && 
+        c.doctor === docName && 
         c.id !== editandoId
       )
     );
@@ -140,11 +145,10 @@ function App() {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
     if (esFinDeSemana(formData.fechaCita) || esFechaPasada(formData.fechaCita)) {
-      alert("La fecha seleccionada no es válida (Fin de semana o fecha pasada).");
+      alert("La fecha seleccionada no es válida.");
       return;
     }
 
@@ -154,38 +158,40 @@ function App() {
       hora: formData.horaCita 
     };
 
-    if (editandoId) {
-      setCitasRegistradas(citasRegistradas.map(c => 
-        c.id === editandoId ? { ...dataFinal, id: editandoId, estatus: c.estatus, metodoPagoActual: c.metodoPagoActual } : c
-      ));
-      setEditandoId(null);
-      alert("Cita actualizada correctamente.");
-    } else {
-      setCitasRegistradas([
-        ...citasRegistradas, 
-        { ...dataFinal, id: Date.now(), estatus: 'Pendiente', metodoPagoActual: 'Pendiente' }
-      ]);
-      alert("Cita agendada con éxito.");
+    try {
+      if (editandoId) {
+        const citaRef = doc(db, "citas", editandoId);
+        await updateDoc(citaRef, dataFinal);
+        setEditandoId(null);
+        alert("Cita actualizada correctamente.");
+      } else {
+        await addDoc(collection(db, "citas"), {
+          ...dataFinal,
+          estatus: 'Pendiente',
+          metodoPagoActual: 'Pendiente'
+        });
+        alert("Cita agendada con éxito.");
+      }
+      setFormData(initialFormState);
+    } catch (error) {
+      alert("Error al conectar con la base de datos.");
     }
-    setFormData(initialFormState);
   };
 
-  // --- ACCIONES DEL ADMINISTRADOR ---
-  const marcarComoPagado = (id, metodo) => {
-    setCitasRegistradas(citasRegistradas.map(c => 
-      c.id === id ? { ...c, estatus: 'Pagado', metodoPagoActual: metodo } : c
-    ));
+  // --- ACCIONES DEL ADMINISTRADOR EN FIREBASE ---
+  const marcarComoPagado = async (id, metodo) => {
+    const citaRef = doc(db, "citas", id);
+    await updateDoc(citaRef, { estatus: 'Pagado', metodoPagoActual: metodo });
   };
 
-  const reabrirPago = (id) => {
-    setCitasRegistradas(citasRegistradas.map(c => 
-      c.id === id ? { ...c, estatus: 'Pendiente', metodoPagoActual: 'Pendiente' } : c
-    ));
+  const reabrirPago = async (id) => {
+    const citaRef = doc(db, "citas", id);
+    await updateDoc(citaRef, { estatus: 'Pendiente', metodoPagoActual: 'Pendiente' });
   };
 
-  const eliminarRegistro = (id) => {
+  const eliminarRegistro = async (id) => {
     if (window.confirm("¿Seguro que desea eliminar este registro permanentemente?")) {
-      setCitasRegistradas(citasRegistradas.filter(c => c.id !== id));
+      await deleteDoc(doc(db, "citas", id));
     }
   };
 
@@ -201,27 +207,19 @@ function App() {
 
   const descargarExcel = () => {
     if (!filtroDescarga.inicio || !filtroDescarga.fin) {
-      alert("Por favor seleccione un rango de fechas para exportar.");
+      alert("Por favor seleccione un rango de fechas.");
       return;
     }
-    
     const filtradas = citasRegistradas.filter(c => 
       c.fecha >= filtroDescarga.inicio && 
       c.fecha <= filtroDescarga.fin && 
       c.estatus !== 'BLOQUEADO'
     );
-
     if (filtradas.length === 0) {
-      alert("No hay citas pagadas o pendientes en este rango de fechas.");
+      alert("No hay citas en este rango.");
       return;
     }
-
-    const headers = [
-      "ID", "Doctor", "Paciente", "Correo", "Telefono", "Fecha", "Hora", 
-      "Estatus", "Metodo Pago", "Factura", "RFC", "Razon Social", "CP", 
-      "Regimen Fiscal", "Uso CFDI", "Calle", "Numero", "Colonia", "Estado", "Municipio"
-    ];
-
+    const headers = ["ID", "Doctor", "Paciente", "Correo", "Telefono", "Fecha", "Hora", "Estatus", "Metodo Pago", "Factura", "RFC", "Razon Social", "CP", "Regimen Fiscal", "Uso CFDI", "Calle", "Numero", "Colonia", "Estado", "Municipio"];
     const filas = filtradas.map(c => [
       c.id, c.doctor, c.nombre, c.correo, c.telefono, c.fecha, c.hora, 
       c.estatus, c.metodoPagoActual, c.requiereFactura ? 'SI' : 'NO',
@@ -229,13 +227,11 @@ function App() {
       c.usoCFDI || '', c.calle || '', c.numero || '', c.colonia || '', 
       c.estado || '', c.municipio || ''
     ]);
-
     let csvContent = "\uFEFF" + headers.join(",") + "\n" + filas.map(f => f.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.href = url;
-    link.download = `Reporte_Clinica_${filtroDescarga.inicio}_al_${filtroDescarga.fin}.csv`;
+    link.href = URL.createObjectURL(blob);
+    link.download = `Reporte_Clinica.csv`;
     link.click();
   };
 
