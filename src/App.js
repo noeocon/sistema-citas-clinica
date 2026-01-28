@@ -12,10 +12,8 @@ function App() {
 
   // --- CONFIGURACIÓN DE LA CLÍNICA ---
   const doctoresClinica = [
-    "Dr. Armando Casas (Medicina General)",
-    "Dra. Elena Nito (Pediatría)",
-    "Dr. Aquiles Baeza (Cardiología)",
-    "Dra. Zoyla Vaca (Ginecología)"
+    "Dr. Miguel Angel Rivera Puente (Medicina Psiquiatra)",
+    "Psi. Roberto Moreno Topete (Psicologo)"
   ];
 
   const horariosBase = [
