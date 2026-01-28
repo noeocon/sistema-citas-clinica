@@ -145,7 +145,7 @@ function App() {
     });
   };
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault();
     if (esFinDeSemana(formData.fechaCita) || esFechaPasada(formData.fechaCita)) {
       alert("La fecha seleccionada no es válida.");
@@ -165,11 +165,19 @@ function App() {
         setEditandoId(null);
         alert("Cita actualizada correctamente.");
       } else {
+        // 1. Guardar en Firebase
         await addDoc(collection(db, "citas"), {
           ...dataFinal,
           estatus: 'Pendiente',
           metodoPagoActual: 'Pendiente'
         });
+
+        // 2. Lógica de WhatsApp (Cambia el número de abajo por el tuyo)
+        const miTelefono = "523121312968"; // Escribe tu número: Código de país + número
+        const mensaje = `Hola, quiero agendar una cita.%0A*Paciente:* ${formData.nombre}%0A*Doctor:* ${formData.doctor}%0A*Fecha:* ${formData.fechaCita}%0A*Hora:* ${formData.horaCita} hrs.`;
+        
+        window.open(`https://wa.me/${miTelefono}?text=${mensaje}`, '_blank');
+        
         alert("Cita agendada con éxito.");
       }
       setFormData(initialFormState);
